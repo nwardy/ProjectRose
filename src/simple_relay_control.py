@@ -1,159 +1,167 @@
 #!/usr/bin/env python3
 """
-Simple Relay Control Script for Sequent Microsystems 8RELIND Board
-==================================================================
-This simplified script demonstrates how to cycle through each relay on the board,
-turning each one on and off in a pattern before moving to the next relay.
-It's designed to be as simple as possible for testing purposes.
+Simple Relay Controller for Sequent Microsystems 8RELIND Board
+==============================================================
+This script listens for keyboard input (keys 1-8) and controls the corresponding relays.
+When a key is pressed twice, it toggles the relay in a pattern: ON-OFF-ON-OFF
 
 Usage:
-    python simple_relay_control.py [stack_level]
+    python3 simple_relay_control.py [board_id]
 
-    stack_level: Optional parameter for the stack level of the card (0-7)
-                 Default is 0 if not specified
+    board_id: Optional parameter for the board ID (0-7)
+              Default is 0 if not specified
 
 Controls:
-    CTRL+C - Exit the application
+    Keys 1-8      - Select and activate corresponding relay
+    Q or Ctrl+C   - Exit application
 """
 
 import sys
 import time
+import subprocess
+import threading
+import readchar
+import signal
 
-# Check if running on Raspberry Pi with the lib8relind module
-try:
-    import lib8relind
-    SIMULATION_MODE = False
-except ImportError:
-    print("Warning: lib8relind not found, running in simulation mode")
-    print("This script will run in simulation mode for testing on non-Raspberry Pi systems.")
-    SIMULATION_MODE = True
+# Default board id
+DEFAULT_BOARD_ID = 0
+# Pattern timing in seconds
+TOGGLE_DELAY = 0.75
+# Time window for double-press detection (seconds)
+DOUBLE_PRESS_WINDOW = 0.5
+# Track last key pressed and time
+last_key = None
+last_press_time = 0
+# Flag to control program exit
+running = True
+# Track which relays are currently running their patterns
+relay_busy = [False] * 8
 
-# Constants
-RELAY_COUNT = 8
-DEFAULT_STACK = 0
-TOGGLE_COUNT = 3       # Number of times to toggle each relay
-TOGGLE_DELAY = 0.5     # Delay between on/off in seconds
-SEQUENCE_DELAY = 1.0   # Delay before moving to next relay
+def run_relay_command(board_id, relay_num, state):
+    """Run the 8relind command to control a relay"""
+    try:
+        cmd = f"8relind write {board_id} {relay_num} {1 if state else 0}"
+        subprocess.run(cmd, shell=True, check=True)
+        return True
+    except subprocess.SubprocessError as e:
+        print(f"Error controlling relay {relay_num}: {e}")
+        return False
 
-class RelayBoard:
-    """Simple interface to the 8RELIND relay board"""
-    
-    def __init__(self, stack=DEFAULT_STACK):
-        self.stack = stack
-        self.simulation = SIMULATION_MODE
-        self.relay_states = [0] * RELAY_COUNT
+def relay_pattern(board_id, relay_num):
+    """Toggle relay in the ON-OFF-ON-OFF pattern"""
+    relay_idx = relay_num - 1
+    relay_busy[relay_idx] = True
+
+    try:
+        print(f"Activating relay {relay_num} pattern...")
         
-        # Initialize the board - turn all relays off
-        self.set_all(0)
-    
-    def set_relay(self, relay_num, state):
-        """Set state of a single relay (1-8)"""
-        if relay_num < 1 or relay_num > RELAY_COUNT:
-            return False
-        
-        if self.simulation:
-            self.relay_states[relay_num-1] = state
-            print(f"Relay {relay_num}: {'ON' if state else 'OFF'}")
-            return True
-        
-        try:
-            lib8relind.set(self.stack, relay_num, state)
-            return True
-        except Exception as e:
-            print(f"Error setting relay {relay_num}: {e}")
-            return False
-    
-    def get_relay(self, relay_num):
-        """Get state of a single relay (1-8)"""
-        if relay_num < 1 or relay_num > RELAY_COUNT:
-            return 0
-        
-        if self.simulation:
-            return self.relay_states[relay_num-1]
-        
-        try:
-            return lib8relind.get(self.stack, relay_num)
-        except Exception as e:
-            print(f"Error getting relay {relay_num}: {e}")
-            return 0
-    
-    def set_all(self, value):
-        """Set all relays based on bitmap value (0-255)"""
-        if self.simulation:
-            for i in range(RELAY_COUNT):
-                self.relay_states[i] = 1 if (value & (1 << i)) else 0
-            if value > 0:
-                print(f"All relays set to: {bin(value)[2:].zfill(8)}")
-            else:
-                print("All relays OFF")
-            return True
-        
-        try:
-            lib8relind.set_all(self.stack, value)
-            return True
-        except Exception as e:
-            print(f"Error setting all relays: {e}")
-            return False
-            
-    def toggle_relay_pattern(self, relay_num):
-        """Toggle a relay on and off in the specified pattern"""
-        print(f"\n--- Toggling Relay {relay_num} ---")
-        
-        # Initial on state
-        self.set_relay(relay_num, 1)
+        # ON
+        run_relay_command(board_id, relay_num, True)
         time.sleep(TOGGLE_DELAY)
         
-        # Toggle the specified number of times
-        for i in range(TOGGLE_COUNT):
-            # Off
-            self.set_relay(relay_num, 0)
-            time.sleep(TOGGLE_DELAY)
+        # OFF
+        run_relay_command(board_id, relay_num, False)
+        time.sleep(TOGGLE_DELAY)
+        
+        # ON
+        run_relay_command(board_id, relay_num, True)
+        time.sleep(TOGGLE_DELAY)
+        
+        # Final OFF
+        run_relay_command(board_id, relay_num, False)
+        
+        print(f"Relay {relay_num} pattern completed")
+    finally:
+        relay_busy[relay_idx] = False
+
+def handle_key_press(key, board_id):
+    """Handle key press events"""
+    global last_key, last_press_time, running
+    
+    # Check for exit keys
+    if key in ['q', 'Q', '\x03']:  # q, Q or Ctrl+C
+        running = False
+        print("Exiting...")
+        return
+    
+    # Check for relay control keys (1-8)
+    if key in ['1', '2', '3', '4', '5', '6', '7', '8']:
+        relay_num = int(key)
+        relay_idx = relay_num - 1
+        current_time = time.time()
+        
+        # Check for double press
+        if (last_key == key and 
+            (current_time - last_press_time) < DOUBLE_PRESS_WINDOW and
+            not relay_busy[relay_idx]):
             
-            # On
-            self.set_relay(relay_num, 1)
-            time.sleep(TOGGLE_DELAY)
-        
-        # Final state: off
-        self.set_relay(relay_num, 0)
-        time.sleep(SEQUENCE_DELAY)  # Pause before next relay
+            # Start relay pattern in a separate thread
+            thread = threading.Thread(
+                target=relay_pattern,
+                args=(board_id, relay_num)
+            )
+            thread.daemon = True
+            thread.start()
+            
+            # Reset last key to prevent triple-press detection
+            last_key = None
+            last_press_time = 0
+        else:
+            # First press - save the key and time
+            print(f"Press key {key} again quickly to activate relay {relay_num}")
+            last_key = key
+            last_press_time = current_time
 
-    def run_sequence(self):
-        """Run through all relays in sequence"""
-        print(f"Starting relay sequence on stack {self.stack}")
-        print("Press CTRL+C to exit")
-        print("----------------------------")
-        
-        try:
-            while True:  # Run continuously until interrupted
-                # Cycle through all relays
-                for relay in range(1, RELAY_COUNT + 1):
-                    self.toggle_relay_pattern(relay)
-                    
-        except KeyboardInterrupt:
-            # Clean up on CTRL+C
-            print("\nSequence interrupted by user")
-            self.set_all(0)  # Turn all relays off
-            print("All relays turned OFF")
-
+def signal_handler(sig, frame):
+    """Handle interrupt signal (Ctrl+C)"""
+    global running
+    running = False
+    print("\nExiting...")
 
 def main():
     """Main entry point"""
-    # Get stack level from command line argument
-    stack = DEFAULT_STACK
+    # Get board ID from command line argument
+    board_id = DEFAULT_BOARD_ID
     if len(sys.argv) > 1:
         try:
-            stack = int(sys.argv[1])
-            if stack < 0 or stack > 7:
-                print("Error: Stack level must be between 0 and 7")
+            board_id = int(sys.argv[1])
+            if board_id < 0 or board_id > 7:
+                print("Error: Board ID must be between 0 and 7")
                 sys.exit(1)
         except ValueError:
-            print("Error: Invalid stack level provided")
+            print("Error: Invalid board ID provided")
             sys.exit(1)
     
-    # Create and run board
-    board = RelayBoard(stack)
-    board.run_sequence()
-
+    # Set up signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    # Turn all relays off at start
+    print(f"Initializing board {board_id}, turning all relays off...")
+    for relay in range(1, 9):
+        run_relay_command(board_id, relay, False)
+    
+    print("\n=== Relay Controller Ready ===")
+    print(f"Board ID: {board_id}")
+    print("Press keys 1-8 twice quickly to activate a relay pattern")
+    print("Press Q or Ctrl+C to exit")
+    print("==============================\n")
+    
+    global running
+    while running:
+        # Non-blocking key detection
+        if readchar.kbhit():
+            key = readchar.readchar()
+            handle_key_press(key, board_id)
+        
+        # Small delay to prevent high CPU usage
+        time.sleep(0.1)
+    
+    # Make sure all relays are off when exiting
+    print("Turning all relays off...")
+    for relay in range(1, 9):
+        run_relay_command(board_id, relay, False)
+    
+    print("Goodbye!")
 
 if __name__ == "__main__":
     main()

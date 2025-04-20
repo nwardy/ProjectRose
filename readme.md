@@ -1,6 +1,6 @@
-# ProjectRose 8-Relay Sequencer
+# ProjectRose - Relay Controller
 
-Control application for Sequent Microsystems 8RELIND board on Raspberry Pi.
+Simple controller for Sequent Microsystems 8RELIND board on Raspberry Pi.
 
 ## Quick Start
 
@@ -16,27 +16,35 @@ Control application for Sequent Microsystems 8RELIND board on Raspberry Pi.
    ./src/install.sh
    ```
 
-3. Start the relay control:
+3. Start the relay controller:
    ```bash
-   cd ~/relay-sequencer
-   ./run_simple.sh
+   cd ~/simple_relay_controller
+   ./start.sh
    ```
 
-## What It Does
+## How It Works
 
-Automatically cycles through each of the 8 relays on the Sequent Microsystems board, toggling them on and off multiple times before moving to the next relay. Press CTRL+C to exit.
+- Press any key from 1-8 twice quickly to activate the corresponding relay
+- The relay will toggle in a pattern: ON-OFF-ON-OFF (with 0.75 second delays)
+- Press Q or Ctrl+C to exit
+
+## Command Line Options
+
+You can specify the board ID (0-7) when starting:
+```bash
+./start.sh 1  # Use board with ID 1
+```
 
 ## Hardware Requirements
 
 - Raspberry Pi (any model)
 - Sequent Microsystems 8RELIND board
-- Bluetooth USB keyboard for control
+- Keyboard for input
 
 ## File Structure
 
 ```
 src/
 ├── install.sh             # Installation script
-├── simple_relay_control.py # Main control script
-└── requirements.txt       # Python dependencies
+└── simple_relay_control.py # Main control script
 ```
