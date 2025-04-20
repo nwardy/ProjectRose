@@ -1,0 +1,13 @@
+# Python requirements for 8-Relay Sequencer application
+
+# Core dependencies
+python-setuptools>=44.0.0
+wheel>=0.34.2
+smbus>=1.1.post2
+
+# For running the application
+# Note: lib8relind will be installed from the Sequent Microsystems repository
+
+# Optional dependencies for development
+pytest>=6.0.0
+pylint>=2.5.0
