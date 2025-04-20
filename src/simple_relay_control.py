@@ -3,16 +3,16 @@
 Simple Relay Controller for Sequent Microsystems 8RELIND Board
 ==============================================================
 This script listens for keyboard input (keys 1-8) and controls the corresponding relays.
-When a key is pressed twice, it toggles the relay in a pattern: ON-OFF-ON-OFF
+When a key is pressed, it toggles the relay in a pattern: ON-OFF-ON-OFF
 
 Usage:
     python3 simple_relay_control.py [board_id]
 
     board_id: Optional parameter for the board ID (0-7)
-              Default is 0 if not specified
+              Default is 7 if not specified
 
 Controls:
-    Keys 1-8      - Select and activate corresponding relay
+    Keys 1-8      - Activate corresponding relay
     Q or Ctrl+C   - Exit application
 """
 
@@ -24,14 +24,9 @@ import readchar
 import signal
 
 # Default board id
-DEFAULT_BOARD_ID = 0
+DEFAULT_BOARD_ID = 7
 # Pattern timing in seconds
 TOGGLE_DELAY = 0.75
-# Time window for double-press detection (seconds)
-DOUBLE_PRESS_WINDOW = 0.5
-# Track last key pressed and time
-last_key = None
-last_press_time = 0
 # Flag to control program exit
 running = True
 # Track which relays are currently running their patterns
@@ -76,7 +71,7 @@ def relay_pattern(board_id, relay_num):
 
 def handle_key_press(key, board_id):
     """Handle key press events"""
-    global last_key, last_press_time, running
+    global running
     
     # Check for exit keys
     if key in ['q', 'Q', '\x03']:  # q, Q or Ctrl+C
@@ -88,13 +83,9 @@ def handle_key_press(key, board_id):
     if key in ['1', '2', '3', '4', '5', '6', '7', '8']:
         relay_num = int(key)
         relay_idx = relay_num - 1
-        current_time = time.time()
         
-        # Check for double press
-        if (last_key == key and 
-            (current_time - last_press_time) < DOUBLE_PRESS_WINDOW and
-            not relay_busy[relay_idx]):
-            
+        # Only start the pattern if relay is not already busy
+        if not relay_busy[relay_idx]:
             # Start relay pattern in a separate thread
             thread = threading.Thread(
                 target=relay_pattern,
@@ -102,15 +93,8 @@ def handle_key_press(key, board_id):
             )
             thread.daemon = True
             thread.start()
-            
-            # Reset last key to prevent triple-press detection
-            last_key = None
-            last_press_time = 0
         else:
-            # First press - save the key and time
-            print(f"Press key {key} again quickly to activate relay {relay_num}")
-            last_key = key
-            last_press_time = current_time
+            print(f"Relay {relay_num} is already running")
 
 def signal_handler(sig, frame):
     """Handle interrupt signal (Ctrl+C)"""
@@ -142,19 +126,20 @@ def main():
     
     print("\n=== Relay Controller Ready ===")
     print(f"Board ID: {board_id}")
-    print("Press keys 1-8 twice quickly to activate a relay pattern")
+    print("Press keys 1-8 to activate a relay pattern")
     print("Press Q or Ctrl+C to exit")
     print("==============================\n")
     
+    # Main input loop
     global running
     while running:
-        # Non-blocking key detection
-        if readchar.kbhit():
+        try:
+            # This will block until a key is pressed
             key = readchar.readchar()
             handle_key_press(key, board_id)
-        
-        # Small delay to prevent high CPU usage
-        time.sleep(0.1)
+        except Exception as e:
+            print(f"Error reading key: {e}")
+            time.sleep(0.5)  # Avoid tight loop if errors occur
     
     # Make sure all relays are off when exiting
     print("Turning all relays off...")

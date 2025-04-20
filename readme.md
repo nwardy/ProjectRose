@@ -10,21 +10,26 @@ Simple controller for Sequent Microsystems 8RELIND board on Raspberry Pi.
    cd ProjectRose
    ```
 
-2. Run the installation script:
+2. Install required Python package:
+   ```bash
+   pip3 install readchar
+   ```
+
+3. Run the installation script:
    ```bash
    chmod +x src/install.sh
    ./src/install.sh
    ```
 
-3. Start the relay controller:
+4. Start the relay controller:
    ```bash
-   cd ~/simple_relay_controller
+   cd ~/relay-controller
    ./start.sh
    ```
 
 ## How It Works
 
-- Press any key from 1-8 twice quickly to activate the corresponding relay
+- Press any key from 1-8 to activate the corresponding relay
 - The relay will toggle in a pattern: ON-OFF-ON-OFF (with 0.75 second delays)
 - Press Q or Ctrl+C to exit
 
@@ -32,8 +37,9 @@ Simple controller for Sequent Microsystems 8RELIND board on Raspberry Pi.
 
 You can specify the board ID (0-7) when starting:
 ```bash
-./start.sh 1  # Use board with ID 1
+./start.sh 2  # Use board with ID 2
 ```
+Default board ID is 7 if not specified.
 
 ## Hardware Requirements
 

@@ -5,6 +5,7 @@
 echo "================================================="
 echo "       ProjectRose Relay Controller Setup        "
 echo "       For Sequent Microsystems 8RELIND         "
+echo "       Board ID: 7                              "
 echo "================================================="
 echo ""
 
