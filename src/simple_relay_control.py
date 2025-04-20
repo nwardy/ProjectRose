@@ -3,6 +3,8 @@
 Rapid Relay Controller for Sequent Microsystems 8RELIND Board
 ===========================================================
 Simply press keys 1-8 to activate the corresponding relay.
+Press * to activate all relays simultaneously.
+Press m for a musical easter egg.
 The relay will rapidly toggle on/off for 5 seconds.
 
 Usage:
@@ -45,9 +47,79 @@ def rapid_toggle_relay(relay_num):
     
     print(f"Completed {toggle_count} toggles for relay {relay_num}")
 
+def rapid_toggle_all_relays():
+    """Rapidly toggle all relays ON-OFF for 5 seconds"""
+    print(f"\nRapidly toggling ALL relays for {RAPID_TOGGLE_DURATION} seconds...")
+    
+    # Calculate how many toggles we can fit in the duration
+    end_time = time.time() + RAPID_TOGGLE_DURATION
+    
+    # Keep toggling until we reach the time limit
+    toggle_count = 0
+    while time.time() < end_time:
+        # Turn all relays ON
+        for relay in range(1, 9):
+            run_command(f"8relind {BOARD_ID} write {relay} on")
+        time.sleep(TOGGLE_DELAY)
+        
+        # Turn all relays OFF
+        for relay in range(1, 9):
+            run_command(f"8relind {BOARD_ID} write {relay} off")
+        time.sleep(TOGGLE_DELAY)
+        
+        toggle_count += 1
+    
+    print(f"Completed {toggle_count} toggles for ALL relays")
+
+def play_music_pattern():
+    """Play a musical pattern on all relays as an easter egg"""
+    print("\n🎵 Playing musical pattern on relays! 🎵")
+    
+    # Simple musical pattern
+    pattern = [
+        # Format: ([relays to activate], duration)
+        ([1, 3, 5, 7], 0.2),  # Alternating pattern
+        ([2, 4, 6, 8], 0.2),  # Alternating pattern
+        ([1, 2, 3, 4, 5, 6, 7, 8], 0.3),  # All relays
+        ([1, 8], 0.15),  # Outer relays
+        ([2, 7], 0.15),  # Moving inward
+        ([3, 6], 0.15),  # Moving inward
+        ([4, 5], 0.15),  # Inner relays
+        ([4, 5], 0.15),  # Inner relays again
+        ([3, 6], 0.15),  # Moving outward
+        ([2, 7], 0.15),  # Moving outward
+        ([1, 8], 0.15),  # Outer relays
+        (list(range(1, 9)), 0.1),  # Quick all on
+        ([], 0.1),  # All off
+        (list(range(1, 9)), 0.1),  # Quick all on
+        ([], 0.1),  # All off
+        (list(range(1, 9)), 0.3),  # Final all on
+        ([], 0.2),  # Final all off
+    ]
+    
+    # Play the pattern
+    for relays, duration in pattern:
+        # Turn specified relays on
+        for relay in relays:
+            run_command(f"8relind {BOARD_ID} write {relay} on")
+        
+        # Wait for the specified duration
+        time.sleep(duration)
+        
+        # Turn all relays off
+        for relay in range(1, 9):
+            run_command(f"8relind {BOARD_ID} write {relay} off")
+        
+        # Small pause between notes
+        time.sleep(0.05)
+    
+    print("🎵 Musical pattern complete! 🎵")
+
 # Print instructions
 print("=== Rapid Relay Controller ===")
-print("Press keys 1-8 to activate relays")
+print("Press keys 1-8 to activate individual relays")
+print("Press * to activate ALL relays simultaneously")
+print("Press m for a musical easter egg")
 print("Each relay will rapidly toggle on/off for 5 seconds")
 print("Press Ctrl+C to exit")
 print("=============================")
@@ -56,15 +128,19 @@ print("=============================")
 try:
     while True:
         # Simple input
-        key = input("Enter relay (1-8): ")
+        key = input("Enter relay (1-8, * for all, m for music): ")
         
-        # Check for valid relay number
+        # Check for valid input
         if key in ['1', '2', '3', '4', '5', '6', '7', '8']:
             rapid_toggle_relay(int(key))
+        elif key == '*':
+            rapid_toggle_all_relays()
+        elif key.lower() == 'm':
+            play_music_pattern()
         elif key.lower() in ['q', 'quit', 'exit']:
             break
         else:
-            print("Please enter a number between 1 and 8")
+            print("Please enter a number between 1-8, * for all relays, or m for music")
 except KeyboardInterrupt:
     print("\nExiting...")
 
