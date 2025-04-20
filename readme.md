@@ -12,8 +12,8 @@ Control application for Sequent Microsystems 8RELIND board on Raspberry Pi.
 
 2. Run the installation script:
    ```bash
-   chmod +x src/install_script.sh
-   ./src/install_script.sh
+   chmod +x src/install.sh
+   ./src/install.sh
    ```
 
 3. Start the relay control:
@@ -36,7 +36,7 @@ Automatically cycles through each of the 8 relays on the Sequent Microsystems bo
 
 ```
 src/
-├── install_script.sh      # Installation script
+├── install.sh             # Installation script
 ├── simple_relay_control.py # Main control script
 └── requirements.txt       # Python dependencies
 ```
