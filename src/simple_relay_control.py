@@ -27,50 +27,32 @@ def run_command(cmd):
     os.system(cmd)
 
 def rapid_toggle_relay(relay_num):
-    """Rapidly toggle relay ON-OFF for 5 seconds"""
-    print(f"\nRapidly toggling relay {relay_num} for {RAPID_TOGGLE_DURATION} seconds...")
+    """Fire relay once instead of toggling repeatedly"""
+    print(f"\nActivating relay {relay_num} once...")
     
-    # Calculate how many toggles we can fit in the duration
-    end_time = time.time() + RAPID_TOGGLE_DURATION
+    # Turn ON
+    run_command(f"8relind {BOARD_ID} write {relay_num} on")
+    time.sleep(TOGGLE_DELAY)
     
-    # Keep toggling until we reach the time limit
-    toggle_count = 0
-    while time.time() < end_time:
-        # ON
-        run_command(f"8relind {BOARD_ID} write {relay_num} on")
-        time.sleep(TOGGLE_DELAY)
-        
-        # OFF
-        run_command(f"8relind {BOARD_ID} write {relay_num} off")
-        time.sleep(TOGGLE_DELAY)
-        
-        toggle_count += 1
+    # Turn OFF
+    run_command(f"8relind {BOARD_ID} write {relay_num} off")
     
-    print(f"Completed {toggle_count} toggles for relay {relay_num}")
+    print(f"Relay {relay_num} fired once")
 
 def rapid_toggle_all_relays():
-    """Rapidly toggle all relays ON-OFF for 5 seconds"""
-    print(f"\nRapidly toggling ALL relays for {RAPID_TOGGLE_DURATION} seconds...")
+    """Fire all relays once instead of toggling repeatedly"""
+    print(f"\nActivating ALL relays once...")
     
-    # Calculate how many toggles we can fit in the duration
-    end_time = time.time() + RAPID_TOGGLE_DURATION
+    # Turn all relays ON
+    for relay in range(1, 9):
+        run_command(f"8relind {BOARD_ID} write {relay} on")
+    time.sleep(TOGGLE_DELAY)
     
-    # Keep toggling until we reach the time limit
-    toggle_count = 0
-    while time.time() < end_time:
-        # Turn all relays ON
-        for relay in range(1, 9):
-            run_command(f"8relind {BOARD_ID} write {relay} on")
-        time.sleep(TOGGLE_DELAY)
-        
-        # Turn all relays OFF
-        for relay in range(1, 9):
-            run_command(f"8relind {BOARD_ID} write {relay} off")
-        time.sleep(TOGGLE_DELAY)
-        
-        toggle_count += 1
+    # Turn all relays OFF
+    for relay in range(1, 9):
+        run_command(f"8relind {BOARD_ID} write {relay} off")
     
-    print(f"Completed {toggle_count} toggles for ALL relays")
+    print(f"All relays fired once")
 
 def play_music_pattern():
     """Play a musical pattern on all relays as an easter egg"""
@@ -191,7 +173,7 @@ print("Press keys 1-8 to activate individual relays")
 print("Press * to activate ALL relays simultaneously")
 print("Press m for a musical easter egg")
 print("Press b for Beauty and the Beast pattern")
-print("Each relay will rapidly toggle on/off for 5 seconds")
+print("Each relay will fire once when activated")
 print("Press Ctrl+C to exit")
 print("=============================")
 
