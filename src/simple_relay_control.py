@@ -29,16 +29,16 @@ def run_command(cmd):
 def relay_mapping(relay_num):
     """Map keyboard input number to actual relay number based on calibration order"""
     mapping = {
-        1: 4,  # Key 1 triggers relay 4
-        2: 1,  # Key 2 triggers relay 1
-        3: 3,  # Key 3 triggers relay 3
-        4: 8,  # Key 4 triggers relay 8
-        5: 5,  # Key 5 is still skipped
-        6: 7,  # Key 6 triggers relay 7
-        7: 2,  # Key 7 triggers relay 2
-        8: 6   # Key 8 triggers relay 6
+        1: 1,  # Key 1 triggers relay 1
+        2: 2,  # Key 2 triggers relay 2
+        3: 6,  # Key 3 triggers relay 6
+        4: 7,  # Key 4 triggers relay 7
+        5: 0,  # Key 5 is skipped
+        6: 4,  # Key 6 triggers relay 4
+        7: 3,  # Key 7 triggers relay 3
+        8: 5   # Key 8 triggers relay 5
     }
-    # Skip relay 5 regardless of mapping
+    # Skip relay 5 input regardless of mapping
     if relay_num == 5:
         return 0  # Return invalid relay number to skip
     return mapping.get(relay_num, relay_num)
