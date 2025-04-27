@@ -27,28 +27,32 @@ def run_command(cmd):
     os.system(cmd)
 
 def relay_mapping(relay_num):
-    """Map input relay number to actual relay number based on calibration order"""
+    """Map keyboard input number to actual relay number based on calibration order"""
     mapping = {
-        1: 2,  # 1 maps to 2
-        2: 7,  # 2 maps to 7
-        3: 8,  # 3 maps to 8
-        4: 1,  # 4 maps to 1
-        6: 3,  # 6 maps to 3
-        7: 6,  # 7 maps to 6
-        8: 4   # 8 maps to 4
-        # 5 is intentionally omitted to avoid controlling that relay
+        1: 4,  # Key 1 triggers relay 4
+        2: 1,  # Key 2 triggers relay 1
+        3: 3,  # Key 3 triggers relay 3
+        4: 8,  # Key 4 triggers relay 8
+        5: 5,  # Key 5 is still skipped
+        6: 7,  # Key 6 triggers relay 7
+        7: 2,  # Key 7 triggers relay 2
+        8: 6   # Key 8 triggers relay 6
     }
+    # Skip relay 5 regardless of mapping
+    if relay_num == 5:
+        return 0  # Return invalid relay number to skip
     return mapping.get(relay_num, relay_num)
 
 def rapid_toggle_relay(relay_num):
     """Fire relay once instead of toggling repeatedly"""
-    # Skip relay 5 as requested
-    if relay_num == 5:
+    # Map the input relay number to the actual relay number
+    actual_relay = relay_mapping(relay_num)
+    
+    # Skip if mapping returned 0 (invalid relay)
+    if actual_relay == 0:
         print(f"\nSkipping relay {relay_num} as requested...")
         return
         
-    # Map the input relay number to the actual relay number
-    actual_relay = relay_mapping(relay_num)
     print(f"\nActivating relay {relay_num} (mapped to actual relay {actual_relay})...")
     
     # Turn ON
@@ -66,16 +70,18 @@ def rapid_toggle_all_relays():
     
     # Define the relays to activate (excluding 5)
     relay_inputs = [1, 2, 3, 4, 6, 7, 8]
+    active_relays = []
     
     # Turn all mapped relays ON
     for relay in relay_inputs:
         actual_relay = relay_mapping(relay)
-        run_command(f"8relind {BOARD_ID} write {actual_relay} on")
+        if actual_relay != 0:  # Skip invalid relays
+            run_command(f"8relind {BOARD_ID} write {actual_relay} on")
+            active_relays.append(actual_relay)
     time.sleep(TOGGLE_DELAY)
     
     # Turn all mapped relays OFF
-    for relay in relay_inputs:
-        actual_relay = relay_mapping(relay)
+    for actual_relay in active_relays:
         run_command(f"8relind {BOARD_ID} write {actual_relay} off")
     
     print(f"All relays fired once (except relay 5)")
@@ -108,17 +114,20 @@ def play_music_pattern():
     
     # Play the pattern
     for relays, duration in pattern:
+        active_relays = []
+        
         # Turn specified relays on (using mapping)
         for relay in relays:
             actual_relay = relay_mapping(relay)
-            run_command(f"8relind {BOARD_ID} write {actual_relay} on")
+            if actual_relay != 0:  # Skip invalid relays
+                run_command(f"8relind {BOARD_ID} write {actual_relay} on")
+                active_relays.append(actual_relay)
         
         # Wait for the specified duration
         time.sleep(duration)
         
-        # Turn all mapped relays off
-        for relay in [1, 2, 3, 4, 6, 7, 8]:  # Exclude relay 5
-            actual_relay = relay_mapping(relay)
+        # Turn all active relays off
+        for actual_relay in active_relays:
             run_command(f"8relind {BOARD_ID} write {actual_relay} off")
         
         # Small pause between notes
@@ -179,17 +188,20 @@ def play_beauty_and_beast():
     
     # Play the pattern
     for relays, duration in pattern:
+        active_relays = []
+        
         # Turn specified relays on (using mapping)
         for relay in relays:
             actual_relay = relay_mapping(relay)
-            run_command(f"8relind {BOARD_ID} write {actual_relay} on")
+            if actual_relay != 0:  # Skip invalid relays
+                run_command(f"8relind {BOARD_ID} write {actual_relay} on")
+                active_relays.append(actual_relay)
         
         # Wait for the specified duration
         time.sleep(duration)
         
-        # Turn all mapped relays off
-        for relay in [1, 2, 3, 4, 6, 7, 8]:  # Exclude relay 5
-            actual_relay = relay_mapping(relay)
+        # Turn all active relays off
+        for actual_relay in active_relays:
             run_command(f"8relind {BOARD_ID} write {actual_relay} off")
         
         # Small pause between notes
